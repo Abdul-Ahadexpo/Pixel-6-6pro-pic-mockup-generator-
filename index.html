@@ -103,16 +103,23 @@ function draw() {
     drawCameraGuide(ctx, canvas.width, canvas.height, false);
 }
 
-/* CAMERA GUIDE (realistic Pixel 6 measurements) */
+/* CAMERA GUIDE (exact Pixel 6 measurements) */
 function drawCameraGuide(context, w, h, isExport=false) {
-    // Pixel 6 camera bar sits ~18% from top, ~9.5% height
-    const barY = h * 0.18;
-    const barH = h * 0.095;
+    // Pixel 6 measurements
+    const phoneHeightMM = 158.6;
+    const topGapMM = 18;
+    const barHeightMM = 20;
+
+    const pxPerMm = h / phoneHeightMM; // ~4.29 px/mm
+
+    const barY = topGapMM * pxPerMm;       // 18 mm from top
+    const barH = barHeightMM * pxPerMm;    // 20 mm height
+    const barW = w;                        // full width
 
     context.strokeStyle = "red";
     context.lineWidth = isExport ? 12 : 3;
     context.setLineDash(isExport ? [30,15] : [6,6]);
-    context.strokeRect(0, barY, w, barH);
+    context.strokeRect(0, barY, barW, barH);
     context.setLineDash([]);
 }
 
