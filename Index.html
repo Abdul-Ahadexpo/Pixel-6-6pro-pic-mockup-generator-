@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pixel 6 Skin Maker PRO</title>
+
+<style>
+body {
+    background:#0e0e0e;
+    color:white;
+    font-family:Arial;
+    text-align:center;
+}
+
+#wrap {
+    width:320px;
+    height:680px;
+    margin:auto;
+    border:2px solid #444;
+    position:relative;
+    overflow:hidden;
+    background:black;
+}
+
+canvas {
+    width:100%;
+    height:100%;
+    cursor:grab;
+}
+
+#info {
+    margin-top:10px;
+    font-size:14px;
+    color:#ccc;
+}
+
+button, input {
+    margin:10px;
+    padding:10px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Pixel 6 Back Cover Maker (Print Ready)</h2>
+
+<input type="file" id="upload" accept="image/*">
+<br>
+<button onclick="downloadImage()">Download 300 DPI</button>
+
+<div id="wrap">
+<canvas id="canvas"></canvas>
+</div>
+
+<div id="info">
+📏 Print Size: <b>15.86 cm × 7.48 cm</b><br>
+🖨️ Use A4 paper → Print at <b>100% scale (NO FIT)</b>
+</div>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+// Preview size
+canvas.width = 320;
+canvas.height = 680;
+
+// REAL EXPORT SETTINGS
+const DPI = 300;
+const MM_TO_INCH = 0.03937;
+
+const phoneW = 74.8;
+const phoneH = 158.6;
+
+const exportW = Math.round(phoneW * MM_TO_INCH * DPI);
+const exportH = Math.round(phoneH * MM_TO_INCH * DPI);
+
+let img = null;
+let scale = 1;
+let offsetX = 0;
+let offsetY = 0;
+
+let dragging = false;
+let startX = 0;
+let startY = 0;
+
+/* UPLOAD */
+document.getElementById("upload").addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = ev => {
+        img = new Image();
+        img.onload = () => {
+            scale = Math.max(
+                canvas.width / img.width,
+                canvas.height / img.height
+            );
+
+            offsetX = (canvas.width - img.width * scale) / 2;
+            offsetY = (canvas.height - img.height * scale) / 2;
+
+            draw();
+        };
+        img.src = ev.target.result;
+    };
+
+    reader.readAsDataURL(file);
+});
+
+/* DRAW */
+function draw() {
+    if (!img) return;
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    ctx.imageSmoothingQuality = "high";
+
+    ctx.drawImage(
+        img,
+        offsetX,
+        offsetY,
+        img.width * scale,
+        img.height * scale
+    );
+
+    drawCameraGuide(ctx, canvas.width, canvas.height, false);
+}
+
+/* CAMERA GUIDE */
+function drawCameraGuide(context, w, h, isExport) {
+    const y = h * 0.12;
+    const barH = h * 0.08;
+
+    context.strokeStyle = isExport ? "#ff0000" : "red";
+    context.lineWidth = isExport ? 10 : 3;
+    context.setLineDash(isExport ? [25,15] : [6,6]);
+
+    context.strokeRect(0, y, w, barH);
+
+    context.setLineDash([]);
+}
+
+/* DRAG */
+canvas.onmousedown = e => {
+    dragging = true;
+    startX = e.offsetX;
+    startY = e.offsetY;
+};
+
+canvas.onmouseup = () => dragging = false;
+canvas.onmouseleave = () => dragging = false;
+
+canvas.onmousemove = e => {
+    if (!dragging || !img) return;
+
+    offsetX += (e.offsetX - startX);
+    offsetY += (e.offsetY - startY);
+
+    startX = e.offsetX;
+    startY = e.offsetY;
+
+    draw();
+};
+
+/* ZOOM */
+canvas.onwheel = e => {
+    if (!img) return;
+
+    e.preventDefault();
+
+    const zoom = e.deltaY < 0 ? 1.1 : 0.9;
+
+    const mx = e.offsetX;
+    const my = e.offsetY;
+
+    offsetX = mx - (mx - offsetX) * zoom;
+    offsetY = my - (my - offsetY) * zoom;
+
+    scale *= zoom;
+
+    draw();
+};
+
+/* DOWNLOAD HIGH QUALITY */
+function downloadImage() {
+    if (!img) {
+        alert("Upload image first");
+        return;
+    }
+
+    const exportCanvas = document.createElement("canvas");
+    exportCanvas.width = exportW;
+    exportCanvas.height = exportH;
+
+    const ex = exportCanvas.getContext("2d");
+
+    ex.imageSmoothingQuality = "high";
+
+    const ratioX = exportW / canvas.width;
+    const ratioY = exportH / canvas.height;
+
+    ex.drawImage(
+        img,
+        offsetX * ratioX,
+        offsetY * ratioY,
+        img.width * scale * ratioX,
+        img.height * scale * ratioY
+    );
+
+    // STRONG CAMERA GUIDE
+    drawCameraGuide(ex, exportW, exportH, true);
+
+    const link = document.createElement("a");
+    link.download = "pixel6_skin_300dpi.png";
+    link.href = exportCanvas.toDataURL("image/png");
+    link.click();
+}
+</script>
+
+</body>
+</html>
