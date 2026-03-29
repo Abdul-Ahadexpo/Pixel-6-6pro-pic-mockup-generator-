@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pixel 6 Skin Maker</title>
+
+<style>
+body {
+    background:#121212;
+    color:white;
+    font-family:sans-serif;
+    text-align:center;
+}
+
+#wrap {
+    width:320px;
+    height:680px;
+    margin:20px auto;
+    border:2px solid #555;
+    background:black;
+    touch-action:none;
+}
+
+canvas {
+    width:100%;
+    height:100%;
+}
+
+button, input {
+    margin:10px;
+    padding:10px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Pixel 6 Skin Maker</h2>
+
+<input type="file" id="fileInput" accept="image/*">
+<br>
+<button id="downloadBtn">Download</button>
+
+<div id="wrap">
+<canvas id="canvas"></canvas>
+</div>
+
+<p>Print size: 15.86 cm × 7.48 cm (A4 → 100%)</p>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+canvas.width = 320;
+canvas.height = 680;
+
+let image = null;
+let scale = 1;
+let x = 0;
+let y = 0;
+
+let dragging = false;
+let lastX = 0;
+let lastY = 0;
+
+/* LOAD IMAGE */
+document.getElementById("fileInput").addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const url = URL.createObjectURL(file);
+
+    const img = new Image();
+    img.onload = () => {
+        image = img;
+
+        scale = Math.max(
+            canvas.width / image.width,
+            canvas.height / image.height
+        );
+
+        x = (canvas.width - image.width * scale) / 2;
+        y = (canvas.height - image.height * scale) / 2;
+
+        draw();
+    };
+
+    img.src = url;
+});
+
+/* DRAW FUNCTION */
+function draw() {
+    if (!image) return;
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    ctx.drawImage(
+        image,
+        x,
+        y,
+        image.width * scale,
+        image.height * scale
+    );
+
+    // camera bar
+    const cy = canvas.height * 0.12;
+    const ch = canvas.height * 0.08;
+
+    ctx.strokeStyle = "red";
+    ctx.lineWidth = 3;
+    ctx.setLineDash([6,6]);
+    ctx.strokeRect(0, cy, canvas.width, ch);
+    ctx.setLineDash([]);
+}
+
+/* DRAG */
+canvas.addEventListener("pointerdown", e => {
+    dragging = true;
+    lastX = e.clientX;
+    lastY = e.clientY;
+});
+
+canvas.addEventListener("pointerup", () => dragging = false);
+canvas.addEventListener("pointerleave", () => dragging = false);
+
+canvas.addEventListener("pointermove", e => {
+    if (!dragging || !image) return;
+
+    x += e.clientX - lastX;
+    y += e.clientY - lastY;
+
+    lastX = e.clientX;
+    lastY = e.clientY;
+
+    draw();
+});
+
+/* ZOOM */
+canvas.addEventListener("wheel", e => {
+    if (!image) return;
+
+    e.preventDefault();
+
+    const zoom = e.deltaY < 0 ? 1.1 : 0.9;
+
+    scale *= zoom;
+    draw();
+});
+
+/* DOWNLOAD (FIXED) */
+document.getElementById("downloadBtn").onclick = () => {
+    if (!image) {
+        alert("Upload image first");
+        return;
+    }
+
+    // High resolution export
+    const exportCanvas = document.createElement("canvas");
+    exportCanvas.width = 1500;
+    exportCanvas.height = 3200;
+
+    const ex = exportCanvas.getContext("2d");
+
+    const ratioX = exportCanvas.width / canvas.width;
+    const ratioY = exportCanvas.height / canvas.height;
+
+    ex.drawImage(
+        image,
+        x * ratioX,
+        y * ratioY,
+        image.width * scale * ratioX,
+        image.height * scale * ratioY
+    );
+
+    // strong camera cut line
+    const cy = exportCanvas.height * 0.12;
+    const ch = exportCanvas.height * 0.08;
+
+    ex.strokeStyle = "red";
+    ex.lineWidth = 10;
+    ex.setLineDash([25,15]);
+    ex.strokeRect(0, cy, exportCanvas.width, ch);
+
+    const link = document.createElement("a");
+    link.href = exportCanvas.toDataURL("image/png");
+    link.download = "pixel6_skin.png";
+    link.click();
+};
+</script>
+
+</body>
+</html>
